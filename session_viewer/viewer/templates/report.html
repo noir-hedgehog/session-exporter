@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>养虾回忆</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f0f1a; color: #e0e0e0; min-height: 100vh; }
+
+  .hero {
+    text-align: center; padding: 60px 20px 40px;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border-bottom: 1px solid #222;
+  }
+  .hero-year { font-size: 72px; font-weight: 900; color: #6a8fff; letter-spacing: -4px; line-height: 1; }
+  .hero-sub { font-size: 18px; color: #888; margin-top: 8px; }
+  .hero-title { font-size: 28px; color: #fff; margin-top: 16px; letter-spacing: 2px; }
+
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px; padding: 30px 20px; max-width: 900px; margin: 0 auto;
+  }
+  .stat-card {
+    background: #1a1a2e; border-radius: 16px; padding: 24px 20px;
+    text-align: center; border: 1px solid #252540;
+  }
+  .stat-num { font-size: 42px; font-weight: 800; color: #6a8fff; }
+  .stat-unit { font-size: 13px; color: #555; margin-top: 4px; }
+  .stat-label { font-size: 12px; color: #777; margin-top: 8px; letter-spacing: 1px; text-transform: uppercase; }
+
+  .section { max-width: 900px; margin: 0 auto; padding: 30px 20px; }
+  .section-title { font-size: 16px; color: #555; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 16px; border-bottom: 1px solid #222; padding-bottom: 8px; }
+
+  .agent-bar {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+    background: #1a1a2e; border-radius: 10px; padding: 12px 16px; border: 1px solid #252540;
+  }
+  .agent-name { font-size: 13px; color: #aaa; min-width: 70px; }
+  .agent-bar-fill { height: 8px; border-radius: 4px; background: #6a8fff; transition: width 1s ease; }
+  .agent-pct { font-size: 12px; color: #555; min-width: 40px; text-align: right; }
+  .agent-msgs { font-size: 11px; color: #444; margin-left: auto; }
+
+  .hourly-chart { display: flex; align-items: flex-end; gap: 3px; height: 60px; margin-top: 10px; }
+  .hour-bar { flex: 1; background: #6a8fff; border-radius: 2px; min-height: 2px; transition: height 0.5s ease; opacity: 0.7; }
+  .hour-bar:hover { opacity: 1; }
+  .hourly-labels { display: flex; justify-content: space-between; font-size: 10px; color: #444; margin-top: 4px; }
+
+  .session-list { display: flex; flex-direction: column; gap: 10px; }
+  .sess-item {
+    display: flex; align-items: center; gap: 12px;
+    background: #1a1a2e; border-radius: 10px; padding: 12px 16px; border: 1px solid #252540;
+  }
+  .sess-rank { font-size: 20px; font-weight: 800; color: #333; min-width: 28px; }
+  .sess-rank.gold { color: #f5a623; } .sess-rank.silver { color: #aaa; } .sess-rank.bronze { color: #cd7f32; }
+  .sess-info { flex: 1; }
+  .sess-label { font-size: 13px; color: #aaa; }
+  .sess-meta { font-size: 11px; color: #444; margin-top: 2px; }
+  .sess-count { font-size: 18px; font-weight: 700; color: #6a8fff; }
+
+  .milestone {
+    background: #1a1a2e; border-radius: 14px; padding: 20px; margin-bottom: 14px;
+    border: 1px solid #252540; display: flex; gap: 16px; align-items: center;
+  }
+  .milestone-icon { font-size: 36px; }
+  .milestone-label { font-size: 11px; color: #555; text-transform: uppercase; letter-spacing: 1px; }
+  .milestone-value { font-size: 15px; color: #ccc; margin-top: 4px; }
+  .milestone-time { font-size: 11px; color: #444; margin-top: 2px; }
+
+  .back-btn {
+    display: inline-block; padding: 8px 16px; background: #1a1a2e; color: #888;
+    border-radius: 8px; text-decoration: none; font-size: 13px; border: 1px solid #252540;
+    margin: 20px auto; display: block; width: fit-content;
+  }
+  .back-btn:hover { background: #252540; color: #aaa; }
+
+  .loading { text-align: center; padding: 60px; color: #555; font-size: 14px; }
+
+  .footer { text-align: center; padding: 30px; color: #333; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-year" id="year"></div>
+  <div class="hero-sub">你的养虾回忆</div>
+  <div class="hero-title">REVIEW</div>
+</div>
+
+<div id="loading" class="loading">正在生成回忆...</div>
+
+<div id="content" style="display:none">
+
+  <div class="stats-grid" id="stats-grid"></div>
+
+  <div class="section">
+    <div class="section-title">Agent 对话分布</div>
+    <div id="agent-bars"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">24小时活跃时段</div>
+    <div id="hourly-chart"></div>
+    <div class="hourly-labels"><span>0时</span><span>6时</span><span>12时</span><span>18时</span><span>24时</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">那些值得记住的时刻</div>
+    <div id="milestones"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">TOP 会话</div>
+    <div class="session-list" id="top-sessions"></div>
+  </div>
+
+  <div style="text-align:center">
+    <a href="/" class="back-btn">← 返回会话列表</a>
+  </div>
+
+  <div class="footer">SessionManager · 养虾回忆 · Generated <span id="generated"></span></div>
+</div>
+
+<script>
+const RANKS = ['🥇', '🥈', '🥉', '', '', ''];
+
+async function load() {
+  const params = new URLSearchParams(window.location.search);
+  const year = params.get('year') || new Date().getFullYear();
+  const res = await fetch(`/api/report?year=${year}`);
+  const d = await res.json();
+
+  document.getElementById('year').textContent = d.year;
+  document.getElementById('generated').textContent = d.generated_at;
+
+  // Stats cards
+  const cards = [
+    [d.total_sessions, '次对话', '总会话数'],
+    [d.total_messages, '条消息', '总消息数'],
+    [d.avg_messages_per_session, '条/次', '每会话平均'],
+    [d.avg_per_day, '次/天', '日均会话'],
+  ];
+  document.getElementById('stats-grid').innerHTML = cards.map(([num, unit, label]) => `
+    <div class="stat-card">
+      <div class="stat-num">${num}</div>
+      <div class="stat-unit">${unit}</div>
+      <div class="stat-label">${label}</div>
+    </div>`).join('');
+
+  // Agent bars
+  const maxMsgs = Math.max(...d.agents.map(a => a.msgs), 1);
+  document.getElementById('agent-bars').innerHTML = d.agents.map(a => `
+    <div class="agent-bar">
+      <span class="agent-name">${a.agent}</span>
+      <div class="agent-bar-fill" style="width:${(a.msgs/maxMsgs*100).toFixed(1)}%"></div>
+      <span class="agent-pct">${(a.msgs/d.total_messages*100).toFixed(1)}%</span>
+      <span class="agent-msgs">${a.msgs}条</span>
+    </div>`).join('');
+
+  // Hourly chart
+  const hourly = new Array(24).fill(0);
+  d.hourly.forEach(h => { hourly[h.hour % 24] = h.cnt; });
+  const maxHourly = Math.max(...hourly, 1);
+  document.getElementById('hourly-chart').innerHTML = `
+    <div class="hourly-chart">
+      ${hourly.map((v, i) => `<div class="hour-bar" style="height:${(v/maxHourly*100).toFixed(1)}%" title="${i}时: ${v}条"></div>`).join('')}
+    </div>`;
+
+  // Milestones
+  const ms = [];
+  if (d.first_session) ms.push({
+    icon: '🌱', label: '第一次对话',
+    value: d.first_session.label || d.first_session.id,
+    time: fmt(d.first_session.first_ts)
+  });
+  if (d.longest_session) ms.push({
+    icon: '🏆', label: '最长会话',
+    value: `${d.longest_session.message_count} 条消息`,
+    time: (d.longest_session.label || d.longest_session.id)
+  });
+  if (d.last_session) ms.push({
+    icon: '⏱', label: '最近对话',
+    value: d.last_session.label || d.last_session.id,
+    time: fmt(d.last_session.last_ts)
+  });
+  ms.push({
+    icon: '📝', label: '最长单条消息',
+    value: `${d.max_message_length} 字`,
+    time: '单条消息字数上限'
+  });
+  document.getElementById('milestones').innerHTML = ms.map(m => `
+    <div class="milestone">
+      <div class="milestone-icon">${m.icon}</div>
+      <div>
+        <div class="milestone-label">${m.label}</div>
+        <div class="milestone-value">${m.value}</div>
+        <div class="milestone-time">${m.time}</div>
+      </div>
+    </div>`).join('');
+
+  // Top sessions
+  const top = d.top_sessions || [];
+  if (top.length === 0) {
+    document.getElementById('top-sessions').innerHTML = '<div style="color:#444;font-size:13px;text-align:center;padding:20px">暂无数据</div>';
+  } else {
+    document.getElementById('top-sessions').innerHTML = top.map((s, i) => `
+      <div class="sess-item">
+        <div class="sess-rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${RANKS[i] || (i+1)}</div>
+        <div class="sess-info">
+          <div class="sess-label">${s.label || s.id}</div>
+          <div class="sess-meta">${s.agent} · ${fmt(s.first_ts)}</div>
+        </div>
+        <div class="sess-count">${s.message_count} 条</div>
+      </div>`).join('');
+  }
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('content').style.display = 'block';
+}
+
+function fmt(ts) {
+  if (!ts) return '';
+  return new Date(ts * 1000).toLocaleString('zh-CN', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'});
+}
+
+load();
+</script>
+</body>
+</html>

@@ -6,6 +6,7 @@ import sqlite3
 from pathlib import Path
 
 from flask import Flask, abort, jsonify, render_template, request
+import sys; sys.path.insert(0, __file__.rsplit('/',1)[0]); from report import get_report
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
@@ -21,6 +22,10 @@ def get_db():
 @app.route("/")
 def index():
     return render_template("index.html")
+
+@app.route("/report")
+def report():
+    return render_template("report.html")
 
 
 @app.route("/api/sessions")
@@ -91,6 +96,11 @@ def api_agents():
     cx.close()
     return jsonify({"agents": [dict(r) for r in rows]})
 
+
+@app.route("/api/report")
+def api_report():
+    year = request.args.get("year", type=int)
+    return jsonify(get_report(year))
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8787, debug=False)
