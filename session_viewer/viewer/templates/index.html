@@ -2,254 +2,427 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<title>Session Viewer v2</title>
+<title>SessionViewer</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a1a; color: #e0e0e0; height: 100vh; display: flex; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f0f1a; color: #e0e0e0; height: 100vh; display: flex; flex-direction: column; }
 
-  #sidebar { width: 280px; background: #222; border-right: 1px solid #333; display: flex; flex-direction: column; overflow: hidden; }
-  #sidebar-header { padding: 12px 16px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
-  #sidebar-header h2 { font-size: 13px; color: #888; }
-  #total-count { font-size: 11px; color: #555; font-weight: normal; }
-  #search-box { padding: 10px 16px; border-bottom: 1px solid #333; }
-  #search-input { width: 100%; background: #333; border: none; border-radius: 6px; padding: 7px 10px; color: #e0e0e0; font-size: 13px; }
-  #search-input:focus { outline: 1px solid #555; }
-  #agent-filter { padding: 6px 16px; display: flex; gap: 5px; flex-wrap: wrap; border-bottom: 1px solid #2a2a2a; }
-  .agent-tag { padding: 2px 7px; border-radius: 4px; font-size: 11px; cursor: pointer; background: #2a2a2a; color: #666; }
-  .agent-tag.active { background: #4a4a8a; color: #fff; }
-  #session-list { flex: 1; overflow-y: auto; }
-  .session-item { padding: 9px 16px; border-bottom: 1px solid #252525; cursor: pointer; }
-  .session-item:hover { background: #2a2a2a; }
-  .session-item.active { background: #2a3a5a; border-left: 3px solid #6a8fff; }
-  .session-time { font-size: 10px; color: #555; margin-bottom: 2px; }
-  .session-label { font-size: 12px; color: #aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .session-meta { font-size: 10px; color: #444; margin-top: 2px; }
-  #load-more { padding: 10px; text-align: center; cursor: pointer; color: #555; font-size: 11px; border-top: 1px solid #2a2a2a; }
-  #load-more:hover { color: #888; }
-  #load-more.hidden { display: none; }
+header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 20px; background: #1a1a2e;
+  border-bottom: 1px solid #252540; flex-shrink: 0;
+}
+.header-title { font-size: 14px; font-weight: 600; color: #6a8fff; margin-right: 4px; }
+.header-dir { font-size: 11px; color: #555; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.search-box { display: flex; align-items: center; gap: 6px; background: #252540; border-radius: 8px; padding: 5px 10px; margin-left: auto; }
+.search-box input { background: none; border: none; outline: none; color: #e0e0e0; font-size: 13px; width: 160px; }
+.search-box input::placeholder { color: #555; }
+.search-box button { background: #6a8fff; border: none; color: #fff; padding: 3px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; }
+.search-count { font-size: 11px; color: #555; min-width: 45px; text-align: right; }
+.icon-btn { background: #252540; border: none; color: #888; cursor: pointer; padding: 6px 10px; border-radius: 7px; font-size: 12px; }
+.icon-btn:hover { background: #303060; color: #aaa; }
 
-  #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-  #main-header { padding: 10px 20px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
-  #main-header h1 { font-size: 13px; color: #666; }
-  .btn { padding: 5px 11px; border-radius: 5px; border: none; cursor: pointer; font-size: 12px; }
-  .btn-primary { background: #4a4a8a; color: #fff; }
-  .btn-primary:hover { background: #5a5a9a; }
+.filter-bar { display: flex; gap: 8px; padding: 8px 20px; background: #151525; border-bottom: 1px solid #1e1e35; overflow-x: auto; flex-shrink: 0; }
+.filter-btn { padding: 3px 11px; border-radius: 20px; border: 1px solid #252540; background: none; color: #666; font-size: 12px; cursor: pointer; white-space: nowrap; }
+.filter-btn.active { background: #6a8fff22; border-color: #6a8fff55; color: #6a8fff; }
 
-  #messages { flex: 1; overflow-y: auto; padding: 20px; }
-  .msg { margin-bottom: 14px; max-width: 90%; }
-  .msg-user { margin-left: auto; max-width: 70%; }
-  .msg-user .bubble { background: #3a5a8a; border-radius: 12px 12px 4px 12px; padding: 9px 13px; }
-  .msg-assistant .bubble { background: #252535; border-radius: 12px 12px 12px 4px; padding: 9px 13px; max-width: 70%; }
-  .msg-system .bubble { background: #242424; border-radius: 6px; padding: 6px 11px; max-width: 90%; font-size: 12px; color: #777; }
-  .msg-header { font-size: 10px; color: #444; margin-bottom: 3px; display: flex; gap: 5px; align-items: center; }
-  .msg-sender { font-weight: 600; }
-  .msg-avatar { font-size: 13px; }
-  .msg-content { font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
-  .thinking-toggle { font-size: 10px; color: #444; cursor: pointer; margin-top: 3px; }
-  .thinking-block { display: none; background: #1e1e1e; border: 1px solid #333; border-radius: 6px; padding: 7px 11px; margin-top: 5px; font-size: 11px; color: #666; white-space: pre-wrap; }
-  .thinking-block.open { display: block; }
+main { flex: 1; overflow-y: auto; padding: 14px 20px; }
 
-  #empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #444; }
-  #empty-icon { font-size: 44px; margin-bottom: 10px; }
-  #empty-text { font-size: 13px; }
+.session-card {
+  background: #1a1a2e; border-radius: 10px; padding: 12px 16px; margin-bottom: 8px;
+  border: 1px solid #222; cursor: pointer; transition: all 0.15s;
+}
+.session-card:hover { border-color: #6a8fff44; transform: translateX(2px); }
+.session-card.active { border-color: #6a8fff66; background: #1e1e38; }
+.s-label { font-size: 13px; color: #ccc; font-weight: 500; margin-bottom: 3px; }
+.s-meta { display: flex; gap: 10px; font-size: 11px; color: #555; }
+.s-agent { color: #6a8fff; }
+
+/* Detail view */
+.msg-header { display: flex; align-items: center; gap: 10px; padding: 8px 20px; background: #1a1a2e; border-bottom: 1px solid #252540; flex-shrink: 0; }
+.back-btn { background: none; border: 1px solid #333; color: #888; padding: 3px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+.back-btn:hover { border-color: #6a8fff44; color: #aaa; }
+.msg-title { font-size: 13px; color: #aaa; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hl-badge { font-size: 11px; color: #ffe066; background: #ffe06618; padding: 2px 8px; border-radius: 10px; border: 1px solid #ffe06633; }
+
+.msg-list { padding: 14px 20px; display: flex; flex-direction: column; gap: 10px; }
+.msg-item { max-width: 75%; padding: 9px 13px; border-radius: 13px; font-size: 14px; line-height: 1.6; word-break: break-word; }
+.msg-user { align-self: flex-end; background: #6a8fff22; border-bottom-right-radius: 4px; color: #d0d8f0; }
+.msg-assistant { align-self: flex-start; background: #252540; border-bottom-left-radius: 4px; color: #c8c8d8; }
+.msg-system { align-self: center; background: #1e2a3e; color: #607080; font-size: 12px; max-width: 90%; text-align: center; }
+.msg-time { font-size: 10px; color: #444; margin-top: 3px; text-align: right; }
+.msg-role { font-size: 10px; color: #555; margin-bottom: 3px; }
+
+/* Highlight */
+.hl-match { background: #ffe06644; color: #ffe066; border-radius: 3px; padding: 0 2px; }
+
+/* Search panel */
+.search-panel { display: none; padding: 10px 20px; background: #151525; border-bottom: 1px solid #222; max-height: 45vh; overflow-y: auto; }
+.search-panel.open { display: block; }
+.sr-item { padding: 9px 0; border-bottom: 1px solid #1e1e35; cursor: pointer; }
+.sr-item:last-child { border-bottom: none; }
+.sr-item:hover { background: #1a1a2e; margin: 0 -10px; padding: 9px 10px; border-radius: 8px; }
+.sr-session { font-size: 11px; color: #6a8fff; margin-bottom: 3px; }
+.sr-snippet { font-size: 13px; color: #aaa; line-height: 1.5; }
+.sr-time { font-size: 10px; color: #444; margin-top: 3px; }
+
+/* Settings modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 200; display: none; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: #1a1a2e; border-radius: 16px; padding: 28px; width: 90%; max-width: 480px; border: 1px solid #252540; }
+.modal-title { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 20px; }
+.modal-row { margin-bottom: 16px; }
+.modal-label { font-size: 12px; color: #666; margin-bottom: 6px; display: block; }
+.modal-input { width: 100%; background: #252540; border: 1px solid #333; border-radius: 8px; padding: 8px 12px; color: #e0e0e0; font-size: 13px; outline: none; }
+.modal-input:focus { border-color: #6a8fff66; }
+.modal-hint { font-size: 11px; color: #444; margin-top: 4px; }
+.modal-dir-status { font-size: 12px; margin-top: 6px; min-height: 20px; }
+.modal-dir-status.ok { color: #32dc64; }
+.modal-dir-status.err { color: #ff6464; }
+.modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+.btn-primary { background: #6a8fff; border: none; color: #fff; padding: 8px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+.btn-secondary { background: #252540; border: 1px solid #333; color: #aaa; padding: 8px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+.adapter-note { font-size: 11px; color: #555; background: #1e1e35; padding: 10px 12px; border-radius: 8px; margin-top: 12px; line-height: 1.7; }
+
+.empty { text-align: center; padding: 50px 20px; color: #444; font-size: 14px; }
+.loading { text-align: center; padding: 40px; color: #555; font-size: 14px; }
 </style>
 </head>
 <body>
 
-<div id="sidebar">
-  <div id="sidebar-header">
-    <h2>📂 Sessions <span style="font-size:10px;color:#555;font-weight:normal">v2</span> <span id="total-count"></span></h2>
+<header>
+  <div class="header-title">SessionViewer</div>
+  <div class="header-dir" id="dir-display" title="当前目录">—</div>
+  <div class="search-box">
+    <input type="text" id="search-input" placeholder="搜索消息…" />
+    <button onclick="doSearch()">搜索</button>
+    <span class="search-count" id="search-count"></span>
   </div>
-  <div id="search-box">
-    <input id="search-input" type="text" placeholder="搜索消息内容...">
-  </div>
-  <div id="agent-filter"></div>
-  <div id="session-list"></div>
-  <div id="load-more" class="hidden">↑ 加载更多</div>
+  <button class="icon-btn" onclick="openSettings()" title="目录与框架设置">⚙ 设置</button>
+</header>
+
+<div class="filter-bar" id="filter-bar">
+  <button class="filter-btn active" data-agent="" onclick="setFilter('')">全部</button>
 </div>
 
-<div id="main">
-  <div id="main-header">
-    <h1 id="main-title">选择会话</h1>
-    <div>
-      <button class="btn btn-primary" onclick="exportMarkdown()">导出 Markdown</button>
+<div class="search-panel" id="search-panel">
+  <div id="search-results"></div>
+</div>
+
+<main id="main"><div class="loading">加载中…</div></main>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal">
+    <div class="modal-title">⚙ 会话目录与框架设置</div>
+
+    <div class="modal-row">
+      <label class="modal-label">会话目录</label>
+      <input class="modal-input" id="cfg-dir" placeholder="~/.openclaw/agents" />
+      <div class="modal-hint">选择包含会话文件的根目录，适配器会递归扫描所有子目录</div>
+      <div class="modal-dir-status" id="dir-status"></div>
     </div>
-  </div>
-  <div id="messages">
-    <div id="empty">
-      <div id="empty-icon">💬</div>
-      <div id="empty-text">从左侧选择一个会话</div>
+
+    <div class="modal-row">
+      <label class="modal-label">框架类型</label>
+      <select class="modal-input" id="cfg-adapter" style="appearance:auto;background:#252540;color:#e0e0e0;border:1px solid #333;border-radius:8px;padding:8px 12px;font-size:13px;">
+        <option value="openclaw">OpenClaw（JSONL 格式）</option>
+        <option value="hermes">Hermes Agent（JSON 格式）</option>
+      </select>
+      <div class="adapter-note" id="adapter-note">
+        <strong>OpenClaw</strong>：使用 JSONL，每行一个 JSON 对象，包含 type/message 字段<br>
+        <strong>Hermes</strong>：使用 JSON 文件，包含 tasks[]/messages[] 数组
+      </div>
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn-secondary" onclick="closeSettings()">取消</button>
+      <button class="btn-secondary" onclick="validateDir()">验证目录</button>
+      <button class="btn-primary" onclick="saveSettings()">保存并导入</button>
     </div>
   </div>
 </div>
 
 <script>
+// ─── State ─────────────────────────────────────────────────────────────────
+let currentAgent = '';
 let sessions = [];
-let activeAgent = 'all';
-let activeSession = null;
+let total = 0;
 let offset = 0;
 const LIMIT = 50;
-let total = 0;
-let loading = false;
+let view = 'list';  // 'list' | 'detail' | 'search'
+let currentSessionId = null;
+let hlKeyword = '';
+let cfg = {};
 
+// ─── Init ───────────────────────────────────────────────────────────────────
+async function init() {
+  cfg = await fetch('/api/config').then(r => r.json()).catch(() => ({ session_dir: '', adapter: 'openclaw' }));
+  document.getElementById('dir-display').textContent = cfg.session_dir || '~/.openclaw/agents';
+  document.getElementById('cfg-dir').value = cfg.session_dir || '';
+  document.getElementById('cfg-adapter').value = cfg.adapter || 'openclaw';
+  updateAdapterNote();
+  await loadAgents();
+  await loadSessions();
+}
+
+// ─── Agents ─────────────────────────────────────────────────────────────────
 async function loadAgents() {
-  const res = await fetch('/api/agents');
-  const data = await res.json();
-  const container = document.getElementById('agent-filter');
-  container.innerHTML = `<span class="agent-tag active" data-agent="all">全部</span>`;
-  for (const a of data.agents) {
-    container.innerHTML += `<span class="agent-tag" data-agent="${a.agent}">${a.agent} (${a.session_count})</span>`;
-  }
-  container.addEventListener('click', e => {
-    if (e.target.classList.contains('agent-tag')) setAgent(e.target.dataset.agent);
+  const d = await fetch('/api/agents').then(r => r.json()).catch(() => ({ agents: [] }));
+  const bar = document.getElementById('filter-bar');
+  bar.innerHTML = `<button class="filter-btn active" data-agent="" onclick="setFilter('')">全部</button>`;
+  d.agents.forEach(a => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn';
+    btn.dataset.agent = a.agent;
+    btn.onclick = () => setFilter(a.agent);
+    btn.textContent = `${a.agent} (${a.session_count})`;
+    bar.appendChild(btn);
   });
 }
 
+// ─── Session List ────────────────────────────────────────────────────────────
 async function loadSessions(reset = true) {
-  if (loading) return;
-  loading = true;
-  if (reset) { sessions = []; offset = 0; }
+  if (reset) { offset = 0; sessions = []; }
+  const main = document.getElementById('main');
+  if (reset) main.innerHTML = '<div class="loading">加载中…</div>';
 
-  const url = activeAgent === 'all'
-    ? `/api/sessions?limit=${LIMIT}&offset=${offset}`
-    : `/api/sessions?agent=${activeAgent}&limit=${LIMIT}&offset=${offset}`;
-  const res = await fetch(url);
-  const data = await res.json();
+  const params = new URLSearchParams({ limit: LIMIT, offset: reset ? 0 : offset });
+  if (currentAgent) params.set('agent', currentAgent);
+  const d = await fetch(`/api/sessions?${params}`).then(r => r.json()).catch(() => ({ sessions: [], total: 0 }));
 
-  total = data.total;
-  sessions = reset ? data.sessions : sessions.concat(data.sessions);
-  offset += data.sessions.length;
-
-  document.getElementById('total-count').textContent = `${offset}/${total}`;
-  renderSessionList();
-  document.getElementById('load-more').classList.toggle('hidden', offset >= total);
-  document.getElementById('load-more').textContent = `↑ 加载更多 (${offset}/${total})`;
-  loading = false;
-}
-
-function renderSessionList() {
-  const list = document.getElementById('session-list');
-  if (!sessions.length) {
-    list.innerHTML = '<div style="padding:20px;color:#444;font-size:12px;text-align:center">暂无会话</div>';
-    document.getElementById('load-more').classList.add('hidden');
-  document.getElementById('load-more').textContent = `↑ 加载更多 (${offset}/${total})`;
-    return;
-  }
-  list.innerHTML = sessions.map(s => {
-    const d = new Date(s.first_ts * 1000);
-    const date = d.toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-    return `<div class="session-item" data-id="${s.id}">
-      <div class="session-time">${date}</div>
-      <div class="session-label">${s.label || s.id}</div>
-      <div class="session-meta">${s.agent} · ${s.message_count} 条</div>
-    </div>`;
-  }).join('');
-
-  document.getElementById('load-more').classList.toggle('hidden', offset >= total);
-  document.getElementById('load-more').textContent = `↑ 加载更多 (${offset}/${total})`;
-
-  list.querySelectorAll('.session-item').forEach(el => {
-    el.addEventListener('click', () => openSession(el.dataset.id, el));
-  });
-}
-
-async function openSession(id, el) {
-  document.querySelectorAll('.session-item').forEach(e => e.classList.remove('active'));
-  if (el) el.classList.add('active');
-  activeSession = id;
-
-  const res = await fetch(`/api/sessions/${id}`);
-  const data = await res.json();
-  renderMessages(data.messages);
-
-  const session = sessions.find(s => s.id === id);
-  document.getElementById('main-title').textContent = session ? (session.label || session.id) : id;
-}
-
-function renderMessages(messages) {
-  const container = document.getElementById('messages');
-  if (!messages.length) {
-    container.innerHTML = '<div style="color:#444;padding:20px">无消息</div>';
-    return;
-  }
-  container.innerHTML = messages.map(m => {
-    const ts = new Date(m.timestamp * 1000).toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'});
-    const roleClass = m.role === 'user' ? 'msg-user' : m.role === 'assistant' ? 'msg-assistant' : 'msg-system';
-    const sender = m.account_name || m.sender || m.role;
-    const thinking = m.thinking ? `<div class="thinking-toggle">💭 thinking (${m.thinking.length} chars)</div><div class="thinking-block">${escapeHtml(m.thinking)}</div>` : '';
-    const avatar = m.role === 'user' ? '👤' : m.role === 'assistant' ? '🤖' : '⚙';
-    return `<div class="msg ${roleClass}">
-      <div class="msg-header"><span class="msg-avatar">${avatar}</span><span>${ts}</span><span class="msg-sender">${sender}</span></div>
-      <div class="bubble"><div class="msg-content">${escapeHtml(m.content || '')}</div>${thinking}</div>
-    </div>`;
-  }).join('');
-  container.scrollTop = 0;
-
-  // Thinking toggle
-  container.querySelectorAll('.thinking-toggle').forEach(el => {
-    el.addEventListener('click', () => el.nextElementSibling.classList.toggle('open'));
-  });
-}
-
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-// Search with debounce
-let searchTimer;
-document.getElementById('search-input').addEventListener('input', function() {
-  clearTimeout(searchTimer);
-  searchTimer = setTimeout(() => doSearch(this.value), 300);
-});
-
-async function doSearch(q) {
-  if (!q) { loadSessions(); return; }
-  const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
-  const data = await res.json();
-  sessions = data.results.map(r => ({
-    id: r.session_id, label: r.label || r.session_id,
-    agent: r.agent, first_ts: r.timestamp, message_count: 1
-  }));
-  total = sessions.length;
+  sessions = reset ? d.sessions : [...sessions, ...d.sessions];
+  total = d.total || 0;
   offset = sessions.length;
-  document.getElementById('total-count').textContent = `${total} 条结果`;
-  document.getElementById('load-more').classList.add('hidden');
-  document.getElementById('load-more').textContent = `↑ 加载更多 (${offset}/${total})`;
-  renderSessionList();
+  view = 'list';
+  renderList();
 }
 
-function setAgent(agent) {
-  activeAgent = agent;
-  document.querySelectorAll('.agent-tag').forEach(el => {
-    el.classList.toggle('active', el.dataset.agent === agent);
-  });
+function renderList() {
+  const main = document.getElementById('main');
+  document.getElementById('search-panel').classList.remove('open');
+  if (sessions.length === 0) {
+    main.innerHTML = '<div class="empty">暂无会话<br><br><button class="btn-secondary" onclick="openSettings()">⚙ 切换目录</button></div>';
+    return;
+  }
+  main.innerHTML = sessions.map(s => `
+    <div class="session-card${s.id === currentSessionId ? ' active' : ''}" onclick="openSession('${s.id}')">
+      <div class="s-label">${escHtml(s.label || s.id)}</div>
+      <div class="s-meta">
+        <span class="s-agent">${escHtml(s.agent)}</span>
+        <span>${s.message_count} 条</span>
+        <span>${fmtDate(s.first_ts)}</span>
+      </div>
+    </div>`).join('');
+
+  if (offset < total) {
+    main.innerHTML += `<button id="load-more" onclick="loadSessions(false)">加载更多 (${offset}/${total})</button>`;
+  }
+}
+
+function setFilter(agent) {
+  currentAgent = agent;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.agent === agent));
   loadSessions();
 }
 
-function exportMarkdown() {
-  if (!activeSession) return;
-  fetch(`/api/sessions/${activeSession}`)
-    .then(r => r.json())
-    .then(data => {
-      const session = sessions.find(s => s.id === activeSession);
-      let md = `# ${session?.label || activeSession}\n\n`;
-      for (const m of data.messages) {
-        const ts = new Date(m.timestamp * 1000).toLocaleString('zh-CN');
-        md += `**${m.account_name || m.role}** (${ts})\n\n${m.content || ''}\n\n---\n\n`;
-      }
-      const blob = new Blob([md], {type: 'text/markdown'});
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `${activeSession}.md`;
-      a.click();
-    });
+// ─── Session Detail ──────────────────────────────────────────────────────────
+async function openSession(id) {
+  currentSessionId = id;
+  view = 'detail';
+  const params = new URLSearchParams({ hl: hlKeyword });
+  const d = await fetch(`/api/sessions/${id}?${params}`).then(r => r.json()).catch(() => ({ messages: [] }));
+  renderDetail(d.messages, id);
 }
 
-document.getElementById('load-more').addEventListener('click', () => loadSessions(false));
+function renderDetail(msgs, sid) {
+  const s = sessions.find(x => x.id === sid) || {};
+  const hasHl = msgs.some(m => m._highlight);
 
-loadAgents().then(() => loadSessions());
+  document.getElementById('main').innerHTML = `
+    <div class="msg-header">
+      <button class="back-btn" onclick="closeDetail()">← 返回</button>
+      <div class="msg-title">${escHtml(s.label || sid)}</div>
+      ${hasHl ? `<span class="hl-badge">高亮: "${escHtml(hlKeyword)}"</span>` : ''}
+      ${hlKeyword ? `<button class="back-btn" onclick="clearHl()" style="margin-left:4px">清除</button>` : ''}
+    </div>
+    <div class="msg-list" id="msg-list">
+      ${msgs.map(m => {
+        let content = escHtml(m.content || '');
+        if (m._highlight && m._match_start !== undefined) {
+          const pre = content.slice(0, m._match_start);
+          const match = content.slice(m._match_start, m._match_end);
+          const post = content.slice(m._match_end);
+          content = pre + `<mark class="hl-match">${match}</mark>` + post;
+        } else if (m._snippet) {
+          content = escHtml(m._snippet);
+        }
+        const cls = m.role === 'user' ? 'msg-user' : m.role === 'assistant' ? 'msg-assistant' : m.role === 'system' ? 'msg-system' : 'msg-assistant';
+        const icon = { user: '👤', assistant: '🤖', system: '⚙' }[m.role] || '';
+        return `<div class="msg-item ${cls}">
+          ${icon ? `<div class="msg-role">${icon} ${m.role}</div>` : ''}
+          <div>${content}</div>
+          <div class="msg-time">${fmtTs(m.timestamp)}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  if (hasHl) {
+    const el = document.querySelector('.hl-match');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+function closeDetail() {
+  view = 'list'; currentSessionId = null; hlKeyword = '';
+  document.getElementById('main').innerHTML = '<div class="loading">加载中…</div>';
+  renderList();
+}
+
+function clearHl() {
+  hlKeyword = '';
+  if (currentSessionId) openSession(currentSessionId);
+}
+
+// ─── Search ─────────────────────────────────────────────────────────────────
+function doSearch() {
+  const q = document.getElementById('search-input').value.trim();
+  if (!q) return;
+  hlKeyword = q;
+  searchSessions(q);
+}
+
+async function searchSessions(q) {
+  view = 'search';
+  const panel = document.getElementById('search-panel');
+  panel.classList.add('open');
+  document.getElementById('search-count').textContent = '…';
+  document.getElementById('search-results').innerHTML = '<div class="loading" style="padding:20px">搜索中…</div>';
+
+  const d = await fetch(`/api/search?q=${encodeURIComponent(q)}`).then(r => r.json()).catch(() => ({ results: [], total: 0 }));
+  document.getElementById('search-count').textContent = `${d.total} 条`;
+
+  if (!d.results || d.results.length === 0) {
+    document.getElementById('search-results').innerHTML = '<div class="empty">没有找到匹配的结果</div>';
+    return;
+  }
+
+  document.getElementById('search-results').innerHTML = d.results.map(r => {
+    let snippet = escHtml(r._snippet || (r.content || '').slice(0, 100));
+    if (r._highlight && r._match_start !== undefined) {
+      const pre = snippet.slice(0, r._match_start);
+      const match = snippet.slice(r._match_start, r._match_end);
+      const post = snippet.slice(r._match_end);
+      snippet = pre + `<mark class="hl-match">${match}</mark>` + post;
+    }
+    return `<div class="sr-item" onclick="openSessionHl('${r.session_id}', '${escAttr(q)}')">
+      <div class="sr-session">${escHtml(r.agent)} · ${escHtml(r.label || r.session_id)}</div>
+      <div class="sr-snippet">${snippet}</div>
+      <div class="sr-time">${fmtTs(r.timestamp)}</div>
+    </div>`;
+  }).join('');
+}
+
+async function openSessionHl(sid, keyword) {
+  hlKeyword = keyword;
+  document.getElementById('search-input').value = keyword;
+  document.getElementById('filter-bar').style.display = 'none';
+  document.getElementById('search-panel').classList.remove('open');
+  await openSession(sid);
+  document.getElementById('filter-bar').style.display = '';
+}
+
+// ─── Settings ────────────────────────────────────────────────────────────────
+function openSettings() {
+  document.getElementById('settings-modal').classList.add('open');
+  document.getElementById('dir-status').textContent = '';
+}
+
+function closeSettings() {
+  document.getElementById('settings-modal').classList.remove('open');
+}
+
+function updateAdapterNote() {
+  const a = document.getElementById('cfg-adapter').value;
+  document.getElementById('adapter-note').innerHTML = a === 'openclaw'
+    ? '<strong>OpenClaw</strong>：JSONL 格式，每行 {"type":"message","message":{"role":"...","content":[...]}}'
+    : '<strong>Hermes Agent</strong>：JSON 格式，含 tasks[]/messages[]，通常在 ~/.hermes/sessions/';
+}
+
+async function validateDir() {
+  const dir = document.getElementById('cfg-dir').value.trim();
+  const adapter = document.getElementById('cfg-adapter').value;
+  const el = document.getElementById('dir-status');
+  el.textContent = '验证中…'; el.className = 'modal-dir-status';
+  try {
+    const d = await fetch('/api/session_dir/validate', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ path: dir, adapter })
+    }).then(r => r.json());
+    if (d.valid) {
+      el.textContent = `✓ 找到 ${d.file_count} 个会话文件${d.sample_files.length ? ' · ' + d.sample_files.join(', ') : ''}`;
+      el.className = 'modal-dir-status ok';
+    } else {
+      el.textContent = '✗ ' + (d.error || '无效目录');
+      el.className = 'modal-dir-status err';
+    }
+  } catch(e) {
+    el.textContent = '✗ 验证失败'; el.className = 'modal-dir-status err';
+  }
+}
+
+async function saveSettings() {
+  const dir = document.getElementById('cfg-dir').value.trim();
+  const adapter = document.getElementById('cfg-adapter').value;
+  const el = document.getElementById('dir-status');
+  el.textContent = '正在导入…'; el.className = 'modal-dir-status';
+
+  await fetch('/api/config', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ session_dir: dir, adapter })
+  });
+
+  const result = await fetch('/api/import', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ session_dir: dir, adapter })
+  }).then(r => r.json()).catch(() => ({ imported: 0 }));
+
+  el.textContent = `✓ 导入了 ${result.imported} 个新会话`;
+  el.className = 'modal-dir-status ok';
+
+  cfg = { session_dir: dir, adapter };
+  document.getElementById('dir-display').textContent = dir || '~/.openclaw/agents';
+
+  setTimeout(() => {
+    closeSettings();
+    hlKeyword = '';
+    loadAgents();
+    loadSessions();
+  }, 1200);
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escAttr(s) { return String(s).replace(/'/g,"\\'"); }
+function fmtDate(ts) {
+  if (!ts) return '—';
+  return new Date(ts * 1000).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+}
+function fmtTs(ts) {
+  if (!ts) return '';
+  return new Date(ts).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (document.getElementById('settings-modal').classList.contains('open')) closeSettings();
+    else if (view === 'detail') closeDetail();
+  }
+  if (e.key === 'Enter' && document.activeElement.id === 'search-input') doSearch();
+});
+
+document.getElementById('cfg-adapter').addEventListener('change', updateAdapterNote);
+init();
 </script>
 </body>
 </html>
