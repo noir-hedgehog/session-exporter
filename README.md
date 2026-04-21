@@ -119,3 +119,6 @@ SessionManager/
 
 - [ChatLab](https://github.com/hellodigua/ChatLab) — 本地聊天记录分析工具
 - [OpenClaw](https://github.com/openclaw/openclaw) — 跨平台 AI 助手框架
+
+## 友情链接
+- [Linux Do](https://linux.do)
