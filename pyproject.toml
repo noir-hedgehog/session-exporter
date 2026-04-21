@@ -1,0 +1,16 @@
+[project]
+name = "chatlab-exporter"
+version = "0.1.0"
+description = "Export OpenClaw agent sessions to ChatLab format"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-cov"]
+
+[project.scripts]
+chatlab-exporter = "chatlab_exporter.cli:main"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
