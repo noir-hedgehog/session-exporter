@@ -2,227 +2,495 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>养虾回忆</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f0f1a; color: #e0e0e0; min-height: 100vh; }
+  html, body { height: 100%; overflow: hidden; background: #000; font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif; }
 
-  .hero {
-    text-align: center; padding: 60px 20px 40px;
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    border-bottom: 1px solid #222;
+  .cards-wrapper {
+    width: 100%; height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
   }
-  .hero-year { font-size: 72px; font-weight: 900; color: #6a8fff; letter-spacing: -4px; line-height: 1; }
-  .hero-sub { font-size: 18px; color: #888; margin-top: 8px; }
-  .hero-title { font-size: 28px; color: #fff; margin-top: 16px; letter-spacing: 2px; }
 
-  .stats-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 16px; padding: 30px 20px; max-width: 900px; margin: 0 auto;
+  .card {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 40px; text-align: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.6s ease;
   }
-  .stat-card {
-    background: #1a1a2e; border-radius: 16px; padding: 24px 20px;
-    text-align: center; border: 1px solid #252540;
+  .card.active { opacity: 1; pointer-events: all; }
+
+  /* Progress bar */
+  .progress { position: fixed; top: 0; left: 0; height: 3px; background: #6a8fff; transition: width 0.4s ease; z-index: 100; }
+
+  /* Card counter */
+  .counter { position: fixed; bottom: 24px; right: 24px; font-size: 12px; color: rgba(255,255,255,0.3); z-index: 100; }
+
+  /* Nav arrows */
+  .nav-btn {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.5); padding: 8px 20px; border-radius: 20px;
+    font-size: 13px; cursor: pointer; z-index: 100;
+    transition: all 0.2s; user-select: none;
   }
-  .stat-num { font-size: 42px; font-weight: 800; color: #6a8fff; }
-  .stat-unit { font-size: 13px; color: #555; margin-top: 4px; }
-  .stat-label { font-size: 12px; color: #777; margin-top: 8px; letter-spacing: 1px; text-transform: uppercase; }
+  .nav-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
+  .nav-btn.disabled { opacity: 0.2; pointer-events: none; }
 
-  .section { max-width: 900px; margin: 0 auto; padding: 30px 20px; }
-  .section-title { font-size: 16px; color: #555; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 16px; border-bottom: 1px solid #222; padding-bottom: 8px; }
-
-  .agent-bar {
-    display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
-    background: #1a1a2e; border-radius: 10px; padding: 12px 16px; border: 1px solid #252540;
+  /* Demo badge */
+  .demo-badge {
+    position: fixed; top: 16px; right: 16px;
+    background: rgba(255,100,100,0.15); color: rgba(255,100,100,0.7);
+    font-size: 11px; padding: 4px 10px; border-radius: 10px;
+    border: 1px solid rgba(255,100,100,0.3); z-index: 100;
   }
-  .agent-name { font-size: 13px; color: #aaa; min-width: 70px; }
-  .agent-bar-fill { height: 8px; border-radius: 4px; background: #6a8fff; transition: width 1s ease; }
-  .agent-pct { font-size: 12px; color: #555; min-width: 40px; text-align: right; }
-  .agent-msgs { font-size: 11px; color: #444; margin-left: auto; }
 
-  .hourly-chart { display: flex; align-items: flex-end; gap: 3px; height: 60px; margin-top: 10px; }
-  .hour-bar { flex: 1; background: #6a8fff; border-radius: 2px; min-height: 2px; transition: height 0.5s ease; opacity: 0.7; }
-  .hour-bar:hover { opacity: 1; }
-  .hourly-labels { display: flex; justify-content: space-between; font-size: 10px; color: #444; margin-top: 4px; }
+  /* Card backgrounds */
+  .card-bg-0  { background: linear-gradient(135deg, #0a0a1a 0%, #1a1040 100%); }
+  .card-bg-1  { background: linear-gradient(135deg, #0f1a2e 0%, #162035 100%); }
+  .card-bg-2  { background: linear-gradient(135deg, #1a0a2e 0%, #2d1b4e 100%); }
+  .card-bg-3  { background: linear-gradient(135deg, #0a1a1a 0%, #0d2d2d 100%); }
+  .card-bg-4  { background: linear-gradient(135deg, #1a100a 0%, #3d2010 100%); }
+  .card-bg-5  { background: linear-gradient(135deg, #1a1a0a 0%, #2d2d10 100%); }
+  .card-bg-6  { background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 100%); }
+  .card-bg-7  { background: linear-gradient(135deg, #1a0a1a 0%, #3d0d3d 100%); }
+  .card-bg-8  { background: linear-gradient(135deg, #0a1a0a 0%, #0d3d0d 100%); }
+  .card-bg-9  { background: linear-gradient(135deg, #1a1a2a 0%, #2a2a4a 100%); }
 
-  .session-list { display: flex; flex-direction: column; gap: 10px; }
-  .sess-item {
-    display: flex; align-items: center; gap: 12px;
-    background: #1a1a2e; border-radius: 10px; padding: 12px 16px; border: 1px solid #252540;
+  /* Typography */
+  .card-eyebrow { font-size: 12px; letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 20px; }
+  .card-headline { font-size: clamp(48px, 10vw, 96px); font-weight: 900; color: #fff; line-height: 1; letter-spacing: -3px; }
+  .card-title { font-size: clamp(24px, 5vw, 48px); font-weight: 700; color: #fff; line-height: 1.2; }
+  .card-subtitle { font-size: clamp(14px, 3vw, 20px); color: rgba(255,255,255,0.6); margin-top: 12px; line-height: 1.6; }
+  .card-big-num { font-size: clamp(64px, 15vw, 140px); font-weight: 900; color: #6a8fff; line-height: 1; }
+  .card-label { font-size: 13px; color: rgba(255,255,255,0.35); letter-spacing: 2px; text-transform: uppercase; margin-top: 8px; }
+  .card-footer { font-size: 12px; color: rgba(255,255,255,0.2); margin-top: 40px; letter-spacing: 1px; }
+
+  .tag { display: inline-block; background: rgba(106,143,255,0.15); color: #6a8fff; padding: 4px 12px; border-radius: 12px; font-size: 12px; margin: 4px; }
+  .tag.orange { background: rgba(255,160,50,0.15); color: #ffa032; }
+  .tag.green { background: rgba(50,220,100,0.15); color: #32dc64; }
+  .tag.purple { background: rgba(180,100,255,0.15); color: #b464ff; }
+
+  .card-section { max-width: 600px; width: 100%; }
+
+  .divider { width: 40px; height: 2px; background: rgba(255,255,255,0.2); margin: 20px auto; }
+
+  .listening-bar {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.05); border-radius: 16px;
+    padding: 16px 20px; max-width: 400px; margin: 12px auto;
+    font-size: 15px; color: rgba(255,255,255,0.7);
   }
-  .sess-rank { font-size: 20px; font-weight: 800; color: #333; min-width: 28px; }
-  .sess-rank.gold { color: #f5a623; } .sess-rank.silver { color: #aaa; } .sess-rank.bronze { color: #cd7f32; }
-  .sess-info { flex: 1; }
-  .sess-label { font-size: 13px; color: #aaa; }
-  .sess-meta { font-size: 11px; color: #444; margin-top: 2px; }
-  .sess-count { font-size: 18px; font-weight: 700; color: #6a8fff; }
+  .listening-dot { width: 8px; height: 8px; border-radius: 50%; background: #6a8fff; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-  .milestone {
-    background: #1a1a2e; border-radius: 14px; padding: 20px; margin-bottom: 14px;
-    border: 1px solid #252540; display: flex; gap: 16px; align-items: center;
+  .card-story {
+    font-size: clamp(14px, 3vw, 18px); color: rgba(255,255,255,0.65);
+    line-height: 2; max-width: 480px; margin: 16px auto 0;
   }
-  .milestone-icon { font-size: 36px; }
-  .milestone-label { font-size: 11px; color: #555; text-transform: uppercase; letter-spacing: 1px; }
-  .milestone-value { font-size: 15px; color: #ccc; margin-top: 4px; }
-  .milestone-time { font-size: 11px; color: #444; margin-top: 2px; }
 
-  .back-btn {
-    display: inline-block; padding: 8px 16px; background: #1a1a2e; color: #888;
-    border-radius: 8px; text-decoration: none; font-size: 13px; border: 1px solid #252540;
-    margin: 20px auto; display: block; width: fit-content;
+  .bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 100px; margin: 20px auto; max-width: 300px; }
+  .bar-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .bar-fill { width: 100%; background: #6a8fff; border-radius: 4px 4px 0 0; transition: height 1s ease; opacity: 0.8; }
+  .bar-label { font-size: 10px; color: rgba(255,255,255,0.4); text-align: center; }
+
+  .progress-ring {
+    width: 160px; height: 160px; position: relative; margin: 0 auto 20px;
   }
-  .back-btn:hover { background: #252540; color: #aaa; }
+  .progress-ring svg { transform: rotate(-90deg); }
+  .progress-ring circle { fill: none; stroke-width: 8; }
+  .progress-ring .bg { stroke: rgba(255,255,255,0.1); }
+  .progress-ring .fg { stroke: #6a8fff; stroke-linecap: round; transition: stroke-dashoffset 1.5s ease; }
+  .progress-ring text { font-size: 36px; font-weight: 700; fill: #fff; text-anchor: middle; dominant-baseline: central; transform: rotate(90deg); transform-origin: center; }
 
-  .loading { text-align: center; padding: 60px; color: #555; font-size: 14px; }
+  .quote {
+    font-size: clamp(16px, 4vw, 24px); color: rgba(255,255,255,0.8);
+    font-style: italic; line-height: 1.8; max-width: 500px;
+    border-left: 3px solid #6a8fff; padding-left: 20px; text-align: left; margin: 0 auto;
+  }
 
-  .footer { text-align: center; padding: 30px; color: #333; font-size: 11px; }
+  /* Demo mode: hide real data */
+  [data-demo-show] { display: none; }
+  .is-demo [data-real-show] { display: none !important; }
+  .is-demo [data-demo-show] { display: initial; }
 </style>
 </head>
 <body>
 
-<div class="hero">
-  <div class="hero-year" id="year"></div>
-  <div class="hero-sub">你的养虾回忆</div>
-  <div class="hero-title">REVIEW</div>
+<div class="progress" id="progress"></div>
+<div class="counter" id="counter"></div>
+<div class="demo-badge" id="demo-badge" style="display:none">DEMO 示例</div>
+
+<div class="cards-wrapper" id="cards">
+
+  <!-- CARD 0: Cover -->
+  <div class="card card-bg-0 active" data-index="0">
+    <div class="card-section">
+      <div style="font-size:64px;margin-bottom:20px">🦐</div>
+      <div class="card-eyebrow">年度回忆</div>
+      <div class="card-headline" id="cover-year"></div>
+      <div class="divider"></div>
+      <div class="card-subtitle">你与 AI 的每一天<br>都被好好记着</div>
+      <div class="card-footer">向下滑 · 开启回忆</div>
+    </div>
+  </div>
+
+  <!-- CARD 1: Year opener -->
+  <div class="card card-bg-1" data-index="1">
+    <div class="card-section">
+      <div class="card-eyebrow">这一年</div>
+      <div style="display:flex;justify-content:center;gap:60px;margin:30px 0">
+        <div>
+          <div class="card-big-num" id="stat-sessions">—</div>
+          <div class="card-label">次对话</div>
+        </div>
+        <div>
+          <div class="card-big-num" id="stat-messages">—</div>
+          <div class="card-label">条消息</div>
+        </div>
+      </div>
+      <div class="card-story" id="stat-story"></div>
+    </div>
+  </div>
+
+  <!-- CARD 2: Late night -->
+  <div class="card card-bg-2" data-index="2">
+    <div class="card-section">
+      <div class="card-eyebrow">🌙 凌晨时光</div>
+      <div class="card-title" id="late-night-title"></div>
+      <div class="divider"></div>
+      <div class="card-subtitle" id="late-night-sub"></div>
+      <div class="listening-bar">
+        <div class="listening-dot"></div>
+        <span>你们一直聊到深夜</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARD 3: Who talks more -->
+  <div class="card card-bg-3" data-index="3">
+    <div class="card-section">
+      <div class="card-eyebrow">谁更话痨</div>
+      <div id="ratio-viz" style="margin:30px 0"></div>
+      <div class="card-subtitle" id="ratio-story"></div>
+    </div>
+  </div>
+
+  <!-- CARD 4: Longest session -->
+  <div class="card card-bg-4" data-index="4">
+    <div class="card-section">
+      <div class="card-eyebrow">🏆 最长会话</div>
+      <div style="font-size:72px;margin:20px 0">📝</div>
+      <div class="card-title" id="longest-label"></div>
+      <div class="divider"></div>
+      <div style="display:flex;justify-content:center;gap:40px;margin-top:20px">
+        <div>
+          <div class="card-big-num" style="font-size:56px" id="longest-count">—</div>
+          <div class="card-label">条消息</div>
+        </div>
+        <div>
+          <div class="card-big-num" style="font-size:56px" id="longest-hours">—</div>
+          <div class="card-label">小时</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARD 5: Repeated questions -->
+  <div class="card card-bg-5" data-index="5">
+    <div class="card-section">
+      <div class="card-eyebrow">🤦‍♂️ 重复提问王</div>
+      <div class="card-title">你问了 <span id="repeat-num" style="color:#ffa032">—</span> 次同一个问题</div>
+      <div class="divider"></div>
+      <div class="card-subtitle" id="repeat-story"></div>
+      <div style="margin-top:24px">
+        <span class="tag orange">同类问题</span>
+        <span class="tag orange">它每次都回答</span>
+        <span class="tag orange">但你又忘了</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARD 6: Peak hours -->
+  <div class="card card-bg-6" data-index="6">
+    <div class="card-section">
+      <div class="card-eyebrow">⏰ 你的活跃时段</div>
+      <div class="card-title" id="peak-hour-text"></div>
+      <div class="divider"></div>
+      <div id="monthly-viz" style="margin:20px auto;max-width:400px"></div>
+      <div class="card-subtitle">每月对话分布</div>
+    </div>
+  </div>
+
+  <!-- CARD 7: Top agent -->
+  <div class="card card-bg-7" data-index="7">
+    <div class="card-section">
+      <div class="card-eyebrow">🤖 你的主战 AI</div>
+      <div style="font-size:80px;margin:20px 0">🤖</div>
+      <div class="card-title" id="top-agent-name"></div>
+      <div class="divider"></div>
+      <div style="display:flex;justify-content:center;gap:30px;margin-top:16px">
+        <div><span id="top-agent-msgs">—</span> <span class="card-label">条消息</span></div>
+        <div><span id="top-agent-sess">—</span> <span class="card-label">次对话</span></div>
+      </div>
+      <div style="margin-top:20px">
+        <span class="tag purple">最常用</span>
+        <span class="tag purple">最长情</span>
+        <span class="tag purple">离不开</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARD 8: Summary stats -->
+  <div class="card card-bg-8" data-index="8">
+    <div class="card-section">
+      <div class="card-eyebrow">📊 年度账单</div>
+      <div id="agents-summary" style="margin:20px 0"></div>
+      <div style="display:flex;justify-content:center;gap:30px;margin-top:24px">
+        <div><div class="card-big-num" style="font-size:40px" id="first-day"></div><div class="card-label">第一次对话</div></div>
+        <div><div class="card-big-num" style="font-size:40px" id="last-month"></div><div class="card-label">最后对话</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARD 9: Ending -->
+  <div class="card card-bg-9" data-index="9">
+    <div class="card-section">
+      <div class="card-eyebrow">尾声</div>
+      <div style="font-size:60px;margin:20px 0">🦐</div>
+      <div class="quote" id="ending-quote"></div>
+      <div class="divider"></div>
+      <div class="card-subtitle">明年的你<br>一定会更懂得<br>怎么问问题</div>
+      <div class="card-footer">SessionManager · 养虾回忆</div>
+    </div>
+  </div>
+
 </div>
 
-<div id="loading" class="loading">正在生成回忆...</div>
-
-<div id="content" style="display:none">
-
-  <div class="stats-grid" id="stats-grid"></div>
-
-  <div class="section">
-    <div class="section-title">Agent 对话分布</div>
-    <div id="agent-bars"></div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">24小时活跃时段</div>
-    <div id="hourly-chart"></div>
-    <div class="hourly-labels"><span>0时</span><span>6时</span><span>12时</span><span>18时</span><span>24时</span></div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">那些值得记住的时刻</div>
-    <div id="milestones"></div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">TOP 会话</div>
-    <div class="session-list" id="top-sessions"></div>
-  </div>
-
-  <div style="text-align:center">
-    <a href="/" class="back-btn">← 返回会话列表</a>
-  </div>
-
-  <div class="footer">SessionManager · 养虾回忆 · Generated <span id="generated"></span></div>
-</div>
+<button class="nav-btn" id="next-btn" onclick="nextCard()">继续 · 向下滑 →</button>
 
 <script>
-const RANKS = ['🥇', '🥈', '🥉', '', '', ''];
+const TOTAL = 10;
+let current = 0;
+let data = null;
 
-async function load() {
-  const params = new URLSearchParams(window.location.search);
-  const year = params.get('year') || new Date().getFullYear();
-  const res = await fetch(`/api/report?year=${year}`);
-  const d = await res.json();
+const MONTHS = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
 
-  document.getElementById('year').textContent = d.year;
-  document.getElementById('generated').textContent = d.generated_at;
+async function init() {
+  const res = await fetch('/api/report');
+  data = await res.json();
 
-  // Stats cards
-  const cards = [
-    [d.total_sessions, '次对话', '总会话数'],
-    [d.total_messages, '条消息', '总消息数'],
-    [d.avg_messages_per_session, '条/次', '每会话平均'],
-    [d.avg_per_day, '次/天', '日均会话'],
-  ];
-  document.getElementById('stats-grid').innerHTML = cards.map(([num, unit, label]) => `
-    <div class="stat-card">
-      <div class="stat-num">${num}</div>
-      <div class="stat-unit">${unit}</div>
-      <div class="stat-label">${label}</div>
-    </div>`).join('');
-
-  // Agent bars
-  const maxMsgs = Math.max(...d.agents.map(a => a.msgs), 1);
-  document.getElementById('agent-bars').innerHTML = d.agents.map(a => `
-    <div class="agent-bar">
-      <span class="agent-name">${a.agent}</span>
-      <div class="agent-bar-fill" style="width:${(a.msgs/maxMsgs*100).toFixed(1)}%"></div>
-      <span class="agent-pct">${(a.msgs/d.total_messages*100).toFixed(1)}%</span>
-      <span class="agent-msgs">${a.msgs}条</span>
-    </div>`).join('');
-
-  // Hourly chart
-  const hourly = new Array(24).fill(0);
-  d.hourly.forEach(h => { hourly[h.hour % 24] = h.cnt; });
-  const maxHourly = Math.max(...hourly, 1);
-  document.getElementById('hourly-chart').innerHTML = `
-    <div class="hourly-chart">
-      ${hourly.map((v, i) => `<div class="hour-bar" style="height:${(v/maxHourly*100).toFixed(1)}%" title="${i}时: ${v}条"></div>`).join('')}
-    </div>`;
-
-  // Milestones
-  const ms = [];
-  if (d.first_session) ms.push({
-    icon: '🌱', label: '第一次对话',
-    value: d.first_session.label || d.first_session.id,
-    time: fmt(d.first_session.first_ts)
-  });
-  if (d.longest_session) ms.push({
-    icon: '🏆', label: '最长会话',
-    value: `${d.longest_session.message_count} 条消息`,
-    time: (d.longest_session.label || d.longest_session.id)
-  });
-  if (d.last_session) ms.push({
-    icon: '⏱', label: '最近对话',
-    value: d.last_session.label || d.last_session.id,
-    time: fmt(d.last_session.last_ts)
-  });
-  ms.push({
-    icon: '📝', label: '最长单条消息',
-    value: `${d.max_message_length} 字`,
-    time: '单条消息字数上限'
-  });
-  document.getElementById('milestones').innerHTML = ms.map(m => `
-    <div class="milestone">
-      <div class="milestone-icon">${m.icon}</div>
-      <div>
-        <div class="milestone-label">${m.label}</div>
-        <div class="milestone-value">${m.value}</div>
-        <div class="milestone-time">${m.time}</div>
-      </div>
-    </div>`).join('');
-
-  // Top sessions
-  const top = d.top_sessions || [];
-  if (top.length === 0) {
-    document.getElementById('top-sessions').innerHTML = '<div style="color:#444;font-size:13px;text-align:center;padding:20px">暂无数据</div>';
-  } else {
-    document.getElementById('top-sessions').innerHTML = top.map((s, i) => `
-      <div class="sess-item">
-        <div class="sess-rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${RANKS[i] || (i+1)}</div>
-        <div class="sess-info">
-          <div class="sess-label">${s.label || s.id}</div>
-          <div class="sess-meta">${s.agent} · ${fmt(s.first_ts)}</div>
-        </div>
-        <div class="sess-count">${s.message_count} 条</div>
-      </div>`).join('');
+  if (data.is_demo) {
+    document.body.classList.add('is-demo');
+    document.getElementById('demo-badge').style.display = 'block';
   }
 
-  document.getElementById('loading').style.display = 'none';
-  document.getElementById('content').style.display = 'block';
+  document.getElementById('cover-year').textContent = data.year;
+  buildStats();
+  buildRatio();
+  buildLateNight();
+  buildLongest();
+  buildRepeat();
+  buildPeak();
+  buildTopAgent();
+  buildSummary();
+  buildEnding();
+
+  updateUI();
 }
 
-function fmt(ts) {
-  if (!ts) return '';
-  return new Date(ts * 1000).toLocaleString('zh-CN', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'});
+function buildStats() {
+  document.getElementById('stat-sessions').textContent = data.total_sessions;
+  document.getElementById('stat-messages').textContent = data.total_messages.toLocaleString();
+
+  const avg = data.total_messages / data.total_sessions;
+  const story = avg > 30
+    ? `平均每次对话 ${avg.toFixed(0)} 条消息。你们聊得很深入，不是客套几句就结束的那种。`
+    : avg > 10
+    ? `平均每次对话 ${avg.toFixed(0)} 条消息。有来有往，是认真的交流。`
+    : `你更喜欢简短出击，平均每次 ${avg.toFixed(0)} 条消息就够。`;
+  document.getElementById('stat-story').textContent = story;
 }
 
-load();
+function buildRatio() {
+  const total = (data.user_msgs || 0) + (data.assistant_msgs || 0) || 1;
+  const userPct = ((data.user_msgs / total) * 100).toFixed(0);
+  const asstPct = 100 - userPct;
+
+  document.getElementById('ratio-viz').innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div style="width:60px;text-align:right;font-size:36px;font-weight:700;color:#6a8fff">${userPct}%</div>
+      <div style="flex:1;height:12px;background:rgba(255,255,255,0.1);border-radius:6px;overflow:hidden">
+        <div style="height:100%;width:${userPct}%;background:#6a8fff;border-radius:6px;transition:width 1.5s ease"></div>
+      </div>
+      <div style="width:60px;font-size:36px;font-weight:700;color:rgba(255,255,255,0.4)">${asstPct}%</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,0.4)">
+      <span>👤 你（${data.user_msgs}条）</span>
+      <span>🤖 它（${data.assistant_msgs}条）</span>
+    </div>`;
+
+  const ratioStory = userPct > 60
+    ? `你是个话多的人。你说了 ${data.user_msgs} 条，它回了 ${data.assistant_msgs} 条。聊得多，问题也多。`
+    : userPct < 30
+    ? `你惜字如金，${data.user_msgs} 条消息里藏着 ${(data.total_messages - data.user_msgs)} 条回复。它很努力。`
+    : `你们势均力敌。你说了 ${userPct}% 的话，它说了 ${asstPct}%。`;
+  document.getElementById('ratio-story').textContent = ratioStory;
+}
+
+function buildLateNight() {
+  const sessions = data.late_night_sessions || [];
+  if (sessions.length > 0) {
+    const top = sessions[0];
+    const hour = new Date(top.first_ts * 1000).getHours();
+    const month = new Date(top.first_ts * 1000).getMonth() + 1;
+    const day = new Date(top.first_ts * 1000).getDate();
+    const min = new Date(top.first_ts * 1000).getMinutes().toString().padStart(2, '0');
+
+    document.getElementById('late-night-title').textContent =
+      `${month}月${day}日，你一直聊到 ${hour}:${min}`;
+    document.getElementById('late-night-sub').textContent =
+      `${top.message_count} 条消息，那天你好像有很多想说的。`;
+  } else {
+    document.getElementById('late-night-title').textContent = '凌晨时分';
+    document.getElementById('late-night-sub').textContent = '深夜是你们最常对话的时刻。';
+  }
+}
+
+function buildLongest() {
+  const s = data.longest_session;
+  if (s) {
+    const label = s.label && s.label !== s.id ? s.label : '某次深度对话';
+    document.getElementById('longest-label').textContent = label;
+    document.getElementById('longest-count').textContent = s.message_count;
+    const hours = Math.round((s.last_ts - s.first_ts) / 3600);
+    document.getElementById('longest-hours').textContent = hours > 0 ? hours + 'h' : '<1h';
+  }
+}
+
+function buildRepeat() {
+  const repeats = data.repeated_questions || [];
+  if (repeats.length > 0) {
+    const top = repeats[0];
+    document.getElementById('repeat-num').textContent = top.cnt;
+    document.getElementById('repeat-story').textContent =
+      `"${top.prefix.slice(0, 20)}..."开头的问题，你问了 ${top.cnt} 次。`;
+  } else {
+    document.getElementById('repeat-num').textContent = '0';
+    document.getElementById('repeat-story').textContent = '你很认真，每次问的都不一样。';
+  }
+}
+
+function buildPeak() {
+  const hour = data.most_active_hour || 22;
+  const ampm = hour >= 12 ? '下午' : '上午';
+  const displayHour = hour > 12 ? hour - 12 : hour;
+  document.getElementById('peak-hour-text').textContent =
+    `你最喜欢在 ${ampm}${displayHour} 点 和 AI 聊天`;
+
+  const monthly = data.monthly || [];
+  const maxMsgs = Math.max(...monthly.map(m => m.msgs), 1);
+  const bars = monthly.map(m => {
+    const h = Math.round((m.msgs / maxMsgs) * 80) + 10;
+    return `<div class="bar-item">
+      <div class="bar-fill" style="height:${h}px"></div>
+      <div class="bar-label">${MONTHS[m.month - 1]}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('monthly-viz').innerHTML = `<div class="bar-chart">${bars}</div>`;
+}
+
+function buildTopAgent() {
+  const a = data.top_agent;
+  if (a) {
+    document.getElementById('top-agent-name').textContent = a.agent.toUpperCase() + ' Agent';
+    document.getElementById('top-agent-msgs').textContent = a.msgs.toLocaleString();
+    document.getElementById('top-agent-sess').textContent = a.sessions;
+  }
+}
+
+function buildSummary() {
+  const agents = data.agents || [];
+  const total = data.total_messages || 1;
+
+  const bars = agents.map(a => {
+    const pct = ((a.msgs / total) * 100).toFixed(0);
+    return `<div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+        <span style="color:rgba(255,255,255,0.6)">${a.agent}</span>
+        <span style="color:rgba(255,255,255,0.3)">${a.msgs}条</span>
+      </div>
+      <div style="background:rgba(255,255,255,0.08);border-radius:4px;height:8px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#6a8fff,#b464ff);border-radius:4px;transition:width 1.5s ease"></div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('agents-summary').innerHTML = bars;
+
+  const first = data.first_session;
+  const last = data.last_session;
+  if (first) {
+    const d = new Date(first.first_ts * 1000);
+    document.getElementById('first-day').textContent = `${d.getMonth()+1}/${d.getDate()}`;
+  }
+  if (last) {
+    const d = new Date(last.last_ts * 1000);
+    document.getElementById('last-month').textContent = `${d.getMonth()+1}/${d.getDate()}`;
+  }
+}
+
+function buildEnding() {
+  const quotes = [
+    '你问的每一个问题，都是在帮 AI 更好地理解你。',
+    '最好的对话，是让你忘记屏幕另一边是 AI。',
+    '今年你问了 500 个问题，明年会问 1000 个。',
+    '记录的意义，不是回忆，是知道自己走了多远。',
+  ];
+  const q = quotes[data.total_sessions % quotes.length];
+  document.getElementById('ending-quote').textContent = q;
+}
+
+function updateUI() {
+  document.querySelectorAll('.card').forEach((c, i) => {
+    c.classList.toggle('active', i === current);
+  });
+  const pct = ((current) / (TOTAL - 1) * 100).toFixed(0);
+  document.getElementById('progress').style.width = pct + '%';
+  document.getElementById('counter').textContent = `${current + 1} / ${TOTAL}`;
+
+  const btn = document.getElementById('next-btn');
+  btn.textContent = current === TOTAL - 1 ? '🦐 重新看一遍' : '继续 →';
+}
+
+function nextCard() {
+  if (current < TOTAL - 1) {
+    current++;
+  } else {
+    current = 0;
+  }
+  updateUI();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') nextCard();
+  if (e.key === 'ArrowLeft') { current = Math.max(0, current - 1); updateUI(); }
+});
+
+document.addEventListener('touchend', e => {
+  const dy = e.changedTouches[0].clientY;
+  if (e.target.closest('.nav-btn')) return;
+});
+
+document.addEventListener('wheel', e => {
+  if (e.deltaY > 30) { if (current < TOTAL - 1) { current++; updateUI(); } }
+  if (e.deltaY < -30) { if (current > 0) { current--; updateUI(); } }
+}, { passive: true });
+
+init();
 </script>
 </body>
 </html>
