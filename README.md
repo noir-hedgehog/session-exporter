@@ -10,7 +10,7 @@ OpenClaw 会话管理工具集 — 导出、分析、可视化。
 | 模块 | 说明 |
 |------|------|
 | [session-exporter](./session_exporter/) | 将 OpenClaw 会话导出为 ChatLab 标准格式，支持跨平台聊天记录聚合分析 |
-| [session-viewer](./session_viewer/) | 网页版会话查看器，支持 SQLite 存储、全文搜索、分页浏览 |
+| [session-viewer](./session_viewer/) | 网页版会话查看器 + 养虾回忆 H5 年度报告 |
 
 ## 安装
 
@@ -75,7 +75,8 @@ cd session_viewer
 - [x] Markdown 导出
 
 ### Phase 2: 体验优化 🔄
-- [x] 养虾回忆年度报告（/report 页面）
+- [x] 养虾回忆年度报告 H5（/report 页面，10张叙事卡片）
+- [x] Demo 模式（公开 repo 安全，数据隔离）
 - [ ] thinking 内容展示（折叠/展开）
 - [ ] 多 Agent 筛选增强
 - [ ] 会话时间轴视图
