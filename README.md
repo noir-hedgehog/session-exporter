@@ -75,6 +75,7 @@ cd session_viewer
 - [x] Markdown 导出
 
 ### Phase 2: 体验优化 🔄
+- [x] 养虾回忆年度报告（/report 页面）
 - [ ] thinking 内容展示（折叠/展开）
 - [ ] 多 Agent 筛选增强
 - [ ] 会话时间轴视图
