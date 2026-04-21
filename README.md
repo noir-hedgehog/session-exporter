@@ -1,5 +1,7 @@
 # session-exporter
 
+[English](README.md) | [中文](README_CN.md)
+
 Export [OpenClaw](https://github.com/openclaw/openclaw) agent conversation sessions to [ChatLab](https://github.com/hellodigua/ChatLab) standard format for analysis.
 
 ![](https://img.shields.io/badge/license-MIT-blue.svg)
@@ -14,7 +16,6 @@ OpenClaw stores conversation sessions as JSONL files, but they're not easy to an
 - **Parse OpenClaw JSONL sessions** — handles nested content blocks, skips thinking/tool blocks
 - **ChatLab standard output** — produces compliant JSON/JSONL for direct import
 - **Batch export** — export all sessions for an agent in one command
-- **Multi-agent** — supports `main`, `lingxi`, `test`, `cursor`, `codex` agents
 - **Zero dependencies** — pure Python, no external packages required
 
 ## Installation
