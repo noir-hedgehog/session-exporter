@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>Session Viewer v2</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a1a; color: #e0e0e0; height: 100vh; display: flex; }
+
+  #sidebar { width: 280px; background: #222; border-right: 1px solid #333; display: flex; flex-direction: column; overflow: hidden; }
+  #sidebar-header { padding: 12px 16px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+  #sidebar-header h2 { font-size: 13px; color: #888; }
+  #total-count { font-size: 11px; color: #555; font-weight: normal; }
+  #search-box { padding: 10px 16px; border-bottom: 1px solid #333; }
+  #search-input { width: 100%; background: #333; border: none; border-radius: 6px; padding: 7px 10px; color: #e0e0e0; font-size: 13px; }
+  #search-input:focus { outline: 1px solid #555; }
+  #agent-filter { padding: 6px 16px; display: flex; gap: 5px; flex-wrap: wrap; border-bottom: 1px solid #2a2a2a; }
+  .agent-tag { padding: 2px 7px; border-radius: 4px; font-size: 11px; cursor: pointer; background: #2a2a2a; color: #666; }
+  .agent-tag.active { background: #4a4a8a; color: #fff; }
+  #session-list { flex: 1; overflow-y: auto; }
+  .session-item { padding: 9px 16px; border-bottom: 1px solid #252525; cursor: pointer; }
+  .session-item:hover { background: #2a2a2a; }
+  .session-item.active { background: #2a3a5a; border-left: 3px solid #6a8fff; }
+  .session-time { font-size: 10px; color: #555; margin-bottom: 2px; }
+  .session-label { font-size: 12px; color: #aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .session-meta { font-size: 10px; color: #444; margin-top: 2px; }
+  #load-more { padding: 10px; text-align: center; cursor: pointer; color: #555; font-size: 11px; border-top: 1px solid #2a2a2a; }
+  #load-more:hover { color: #888; }
+  #load-more.hidden { display: none; }
+
+  #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  #main-header { padding: 10px 20px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+  #main-header h1 { font-size: 13px; color: #666; }
+  .btn { padding: 5px 11px; border-radius: 5px; border: none; cursor: pointer; font-size: 12px; }
+  .btn-primary { background: #4a4a8a; color: #fff; }
+  .btn-primary:hover { background: #5a5a9a; }
+
+  #messages { flex: 1; overflow-y: auto; padding: 20px; }
+  .msg { margin-bottom: 14px; max-width: 90%; }
+  .msg-user { margin-left: auto; max-width: 70%; }
+  .msg-user .bubble { background: #3a5a8a; border-radius: 12px 12px 4px 12px; padding: 9px 13px; }
+  .msg-assistant .bubble { background: #252535; border-radius: 12px 12px 12px 4px; padding: 9px 13px; max-width: 70%; }
+  .msg-system .bubble { background: #242424; border-radius: 6px; padding: 6px 11px; max-width: 90%; font-size: 12px; color: #777; }
+  .msg-header { font-size: 10px; color: #444; margin-bottom: 3px; display: flex; gap: 5px; align-items: center; }
+  .msg-sender { font-weight: 600; }
+  .msg-avatar { font-size: 13px; }
+  .msg-content { font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+  .thinking-toggle { font-size: 10px; color: #444; cursor: pointer; margin-top: 3px; }
+  .thinking-block { display: none; background: #1e1e1e; border: 1px solid #333; border-radius: 6px; padding: 7px 11px; margin-top: 5px; font-size: 11px; color: #666; white-space: pre-wrap; }
+  .thinking-block.open { display: block; }
+
+  #empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #444; }
+  #empty-icon { font-size: 44px; margin-bottom: 10px; }
+  #empty-text { font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div id="sidebar-header">
+    <h2>📂 Sessions <span style="font-size:10px;color:#555;font-weight:normal">v2</span> <span id="total-count"></span></h2>
+  </div>
+  <div id="search-box">
+    <input id="search-input" type="text" placeholder="搜索消息内容...">
+  </div>
+  <div id="agent-filter"></div>
+  <div id="session-list"></div>
+  <div id="load-more" class="hidden">↑ 加载更多</div>
+</div>
+
+<div id="main">
+  <div id="main-header">
+    <h1 id="main-title">选择会话</h1>
+    <div>
+      <button class="btn btn-primary" onclick="exportMarkdown()">导出 Markdown</button>
+    </div>
+  </div>
+  <div id="messages">
+    <div id="empty">
+      <div id="empty-icon">💬</div>
+      <div id="empty-text">从左侧选择一个会话</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let sessions = [];
+let activeAgent = 'all';
+let activeSession = null;
+let offset = 0;
+const LIMIT = 50;
+let total = 0;
+let loading = false;
+
+async function loadAgents() {
+  const res = await fetch('/api/agents');
+  const data = await res.json();
+  const container = document.getElementById('agent-filter');
+  container.innerHTML = `<span class="agent-tag active" data-agent="all">全部</span>`;
+  for (const a of data.agents) {
+    container.innerHTML += `<span class="agent-tag" data-agent="${a.agent}">${a.agent} (${a.session_count})</span>`;
+  }
+  container.addEventListener('click', e => {
+    if (e.target.classList.contains('agent-tag')) setAgent(e.target.dataset.agent);
+  });
+}
+
+async function loadSessions(reset = true) {
+  if (loading) return;
+  loading = true;
+  if (reset) { sessions = []; offset = 0; }
+
+  const url = activeAgent === 'all'
+    ? `/api/sessions?limit=${LIMIT}&offset=${offset}`
+    : `/api/sessions?agent=${activeAgent}&limit=${LIMIT}&offset=${offset}`;
+  const res = await fetch(url);
+  const data = await res.json();
+
+  total = data.total;
+  sessions = reset ? data.sessions : sessions.concat(data.sessions);
+  offset += data.sessions.length;
+
+  document.getElementById('total-count').textContent = `${offset}/${total}`;
+  renderSessionList();
+  document.getElementById('load-more').classList.toggle('hidden', offset >= total);
+  document.getElementById('load-more').textContent = `↑ 加载更多 (${offset}/${total})`;
+  loading = false;
+}
+
+function renderSessionList() {
+  const list = document.getElementById('session-list');
+  if (!sessions.length) {
+    list.innerHTML = '<div style="padding:20px;color:#444;font-size:12px;text-align:center">暂无会话</div>';
+    document.getElementById('load-more').classList.add('hidden');
+  document.getElementById('load-more').textContent = `↑ 加载更多 (${offset}/${total})`;
+    return;
+  }
+  list.innerHTML = sessions.map(s => {
+    const d = new Date(s.first_ts * 1000);
+    const date = d.toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+    return `<div class="session-item" data-id="${s.id}">
+      <div class="session-time">${date}</div>
+      <div class="session-label">${s.label || s.id}</div>
+      <div class="session-meta">${s.agent} · ${s.message_count} 条</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('load-more').classList.toggle('hidden', offset >= total);
+  document.getElementById('load-more').textContent = `↑ 加载更多 (${offset}/${total})`;
+
+  list.querySelectorAll('.session-item').forEach(el => {
+    el.addEventListener('click', () => openSession(el.dataset.id, el));
+  });
+}
+
+async function openSession(id, el) {
+  document.querySelectorAll('.session-item').forEach(e => e.classList.remove('active'));
+  if (el) el.classList.add('active');
+  activeSession = id;
+
+  const res = await fetch(`/api/sessions/${id}`);
+  const data = await res.json();
+  renderMessages(data.messages);
+
+  const session = sessions.find(s => s.id === id);
+  document.getElementById('main-title').textContent = session ? (session.label || session.id) : id;
+}
+
+function renderMessages(messages) {
+  const container = document.getElementById('messages');
+  if (!messages.length) {
+    container.innerHTML = '<div style="color:#444;padding:20px">无消息</div>';
+    return;
+  }
+  container.innerHTML = messages.map(m => {
+    const ts = new Date(m.timestamp * 1000).toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'});
+    const roleClass = m.role === 'user' ? 'msg-user' : m.role === 'assistant' ? 'msg-assistant' : 'msg-system';
+    const sender = m.account_name || m.sender || m.role;
+    const thinking = m.thinking ? `<div class="thinking-toggle">💭 thinking (${m.thinking.length} chars)</div><div class="thinking-block">${escapeHtml(m.thinking)}</div>` : '';
+    const avatar = m.role === 'user' ? '👤' : m.role === 'assistant' ? '🤖' : '⚙';
+    return `<div class="msg ${roleClass}">
+      <div class="msg-header"><span class="msg-avatar">${avatar}</span><span>${ts}</span><span class="msg-sender">${sender}</span></div>
+      <div class="bubble"><div class="msg-content">${escapeHtml(m.content || '')}</div>${thinking}</div>
+    </div>`;
+  }).join('');
+  container.scrollTop = 0;
+
+  // Thinking toggle
+  container.querySelectorAll('.thinking-toggle').forEach(el => {
+    el.addEventListener('click', () => el.nextElementSibling.classList.toggle('open'));
+  });
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Search with debounce
+let searchTimer;
+document.getElementById('search-input').addEventListener('input', function() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => doSearch(this.value), 300);
+});
+
+async function doSearch(q) {
+  if (!q) { loadSessions(); return; }
+  const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+  const data = await res.json();
+  sessions = data.results.map(r => ({
+    id: r.session_id, label: r.label || r.session_id,
+    agent: r.agent, first_ts: r.timestamp, message_count: 1
+  }));
+  total = sessions.length;
+  offset = sessions.length;
+  document.getElementById('total-count').textContent = `${total} 条结果`;
+  document.getElementById('load-more').classList.add('hidden');
+  document.getElementById('load-more').textContent = `↑ 加载更多 (${offset}/${total})`;
+  renderSessionList();
+}
+
+function setAgent(agent) {
+  activeAgent = agent;
+  document.querySelectorAll('.agent-tag').forEach(el => {
+    el.classList.toggle('active', el.dataset.agent === agent);
+  });
+  loadSessions();
+}
+
+function exportMarkdown() {
+  if (!activeSession) return;
+  fetch(`/api/sessions/${activeSession}`)
+    .then(r => r.json())
+    .then(data => {
+      const session = sessions.find(s => s.id === activeSession);
+      let md = `# ${session?.label || activeSession}\n\n`;
+      for (const m of data.messages) {
+        const ts = new Date(m.timestamp * 1000).toLocaleString('zh-CN');
+        md += `**${m.account_name || m.role}** (${ts})\n\n${m.content || ''}\n\n---\n\n`;
+      }
+      const blob = new Blob([md], {type: 'text/markdown'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${activeSession}.md`;
+      a.click();
+    });
+}
+
+document.getElementById('load-more').addEventListener('click', () => loadSessions(false));
+
+loadAgents().then(() => loadSessions());
+</script>
+</body>
+</html>

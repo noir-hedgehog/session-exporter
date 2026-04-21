@@ -1,0 +1,10 @@
+[project]
+name = "session-viewer"
+version = "0.1.0"
+description = "OpenClaw session viewer with SQLite backend"
+requires-python = ">=3.10"
+dependencies = ["flask", "flask-cors"]
+
+[project.scripts]
+session-import = "session_importer.cli:main"
+session-viewer = "viewer.app:main"
